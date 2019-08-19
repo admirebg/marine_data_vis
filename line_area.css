@@ -1,0 +1,38 @@
+
+.line {
+  fill: none;
+  stroke: #000;
+  stroke-width: 1.5px;
+  clip-path: url(#clip);
+}
+
+.zoom {
+  cursor: move;
+  fill: none;
+  pointer-events: all;
+}
+
+.area {
+  fill: rgb(204, 204, 255);
+  opacity: 0.5;
+  clip-path: url(#clip);
+}
+
+.axis .tick line {
+  stroke: rgba(0, 0, 0, 0.1);
+}
+
+.legend .l_temp {
+  fill: #000;
+  stroke: #000;
+}
+
+.legend .l_waveh {
+  fill: rgb(204, 204, 255);
+  stroke: none;
+}
+
+.legend .legend-bg {
+  fill: rgba(0, 0, 0, 0.5);
+  stroke: rgba(0, 0, 0, 0.5);
+}

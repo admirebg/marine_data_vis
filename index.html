@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Marin Data Visualization</title>
+        <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+        <script src='https://api.mapbox.com/mapbox-gl-js/v0.51.0/mapbox-gl.js'></script>
+        <link href='https://api.mapbox.com/mapbox-gl-js/v0.51.0/mapbox-gl.css' rel='stylesheet' />
+        <link rel="stylesheet" href="line_area.css">
+        <style type="text/css">
+          body {
+            margin: 0;
+            padding: 0;
+          }
+          #relative
+          {
+            position: relative;
+            width: 1024px;
+            height: 768px;
+          }
+          #map {
+            position: absolute;
+            top: 47px;
+            left: 260px;
+            width: 479px;
+            height: 471px;
+          }
+          #date_of_map_temp {
+            position: absolute;
+            top: 17px;
+            left: 260px;
+            font: 12px "Open Sans Semibold";
+          }
+          #detailed_graph {
+            position: absolute;
+            top: 554px;
+            left: 240px;
+          }
+          .filter-group {
+              font: 12px/20px "Open Sans Semibold";
+              font-weight: 450;
+              position: absolute;
+              top: 47px;
+              left: 745px;
+              z-index: 1;
+              border-radius: 3px;
+              width: 90px;
+              height: 15px;
+              color: #000000;
+          }
+
+          .filter-group input[type=checkbox]:first-child + label {
+              border-radius: 3px 3px 0 0;
+          }
+
+          .filter-group label:last-child {
+              border-radius: 0 0 3px 3px;
+              border: none;
+          }
+
+          .filter-group input[type=checkbox] {
+              display: none;
+          }
+
+          .filter-group input[type=checkbox] + label {
+              background-color: #ffffff;
+              display: block;
+              cursor: pointer;
+              padding: 1px;
+              border: 0px solid #000000;
+          }
+
+          .filter-group input[type=checkbox] + label {
+              background-color: #ffffff;
+              text-transform: capitalize;
+          }
+
+          .filter-group input[type=checkbox] + label:hover,
+          .filter-group input[type=checkbox]:checked + label {
+              background-color: #ffffff;
+          }
+
+          .filter-group input[type=checkbox]:checked + label:before {
+              content: '✔';
+              margin-right: 5px;
+          }
+
+        </style>
+    </head>
+    <body>
+        <div id="relative">
+          <div id='map'>
+          </div>
+          <div id='date_of_map_temp'>
+            2016-09-01
+          </div>
+          <div id="filter-group" class="filter-group">
+            Temperature(°C)
+            <img src="temp_spectrum.png" width="50%">
+          </div>
+          <div id="detailed_graph">
+            <svg width="525" height="400"></svg>
+        </div>
+        <script src="https://d3js.org/d3.v4.min.js"></script>
+        <script src="line_area.js"></script>
+
+        <script>
+          mapboxgl.accessToken = 'pk.eyJ1IjoiYWRtaXJlYmciLCJhIjoiY2pvaDJueTgzMGxrYjNxbjBkNTJ4NHIzNyJ9.dnWlicwx3PblwJADJzUgsw';
+
+          var filterGroup = document.getElementById('filter-group');
+          var obser_insts = ["buoy", "deungpyo", "pagobuoy"];
+          var obser_insts_ko = ["부이", "등표", "파고부이"];
+
+          // Set bounds to New York, New York
+          var bounds = [
+              [124.7846, 32.5639], // Southwest coordinates
+              [132.5156, 38.7967]  // Northeast coordinates
+          ];
+
+          var map = new mapboxgl.Map({
+            container: 'map', // container element id
+            style: 'mapbox://styles/mapbox/light-v9',
+            center: [128.6501, 35.7403], // map center in [lon, lat]
+            minZoom: 5.43,
+            maxZoom: 6.7,
+            zoom: 5.43,
+            maxBounds: bounds
+          });
+
+          map.on('load', function() {
+
+            var layers = map.getStyle().layers;
+            // Find the index of the first symbol layer in the map style
+            var firstSymbolId;
+            for (var i = 0; i < layers.length; i++) {
+                if (layers[i].type === 'symbol') {
+                    firstSymbolId = layers[i].id;
+                    break;
+                }
+            }
+
+            map.addLayer({
+              id: 'sea_temp',
+              type: 'circle',
+              source: {
+                type: 'vector',
+                url: 'mapbox://admirebg.abjj5r6e'
+              },
+              'source-layer': 'kriged_2016-09-01_with_diag_i-agsti3',
+              paint: {
+                'circle-opacity': 0.7,
+                'circle-radius': 2,
+                'circle-color': [
+                  'interpolate',
+                  ['linear'],
+                  ['number', ['get', 'var1.pred']],
+                  5, '#3E599F',
+                  7.5, '#1B89BE',
+                  10, '#65A94A',
+                  12.5, '#C3D241',
+                  15, '#EAE145',
+                  17.5, '#EDB221',
+                  20, '#ED9228',
+                  22.5, '#E46526',
+                  25, '#DD3B2C'
+                ]
+              },
+              minzoom: 5.43,
+              maxzoom: 6.8
+            }, firstSymbolId);
+
+            map.addSource('observatory', {
+              type: 'vector',
+              //url: 'mapbox://admirebg.7isla1oa'
+              url: 'mapbox://admirebg.4e37gz7g'
+            });
+
+            obser_insts.forEach(function(item, index) {
+
+              var layerID = 'obser-' + item;
+              if (!map.getLayer(layerID)) {
+                map.addLayer({
+                  id: layerID,
+                  type: 'symbol',
+                  source: 'observatory',
+                 'source-layer': 'sea_stn_meta_2018_utf8-a5el83',
+                  layout: {
+                      "icon-image": 'circle-11',
+                      "icon-allow-overlap": true,
+                      "icon-size": [
+                        'interpolate', ['linear'], ['zoom'],
+                        5.43, 0.5,
+                        7, 1.2,
+                      ],
+                      "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+                      "text-offset": [0, 0.3],
+                      "text-anchor": "top"
+                  },
+                  "filter": ["==", "inst", item],
+                  minzoom: 5.43,
+                  maxzoom: 6.8
+                }, firstSymbolId);
+
+                // Add checkbox and label elements for the layer.
+                var input = document.createElement('input');
+                input.type = 'checkbox';
+                input.id = layerID;
+                input.checked = true;
+                filterGroup.appendChild(input);
+
+                var label = document.createElement('label');
+                label.setAttribute('for', layerID);
+                label.textContent = item;
+                filterGroup.appendChild(label);
+
+                // When the checkbox changes, update the visibility of the layer.
+                input.addEventListener('change', function(e) {
+                    map.setLayoutProperty(layerID, 'visibility',
+                        e.target.checked ? 'visible' : 'none');
+                });
+
+              }
+
+              map.on('click', layerID, function (e) {
+                  map.flyTo({center: e.features[0].geometry.coordinates});
+                  var stn_id = +e.features[0].properties.stn_id;
+                  var inst = e.features[0].properties.inst;
+                  var coordinates = e.features[0].geometry.coordinates.slice()
+                  var inst_ko;
+
+                  for (var i=0; i<3; i++) {
+                    if (inst === obser_insts[i]) {
+                        inst_ko = obser_insts_ko[i];
+                        break;
+                    }
+                  }
+
+                  new mapboxgl.Popup({closeButton: false})
+                      .setLngLat(coordinates)
+                      .setHTML(
+                        e.features[0].properties.lon + ", " +
+                        e.features[0].properties.lat + "</br>" +
+                        e.features[0].properties.stn_ko + " / " + inst_ko
+                      )
+                      .addTo(map);
+
+                  pre_draw();
+                  draw_graph(stn_id, inst);
+              });
+
+              // Change the cursor to a pointer when the it enters a feature in the 'symbols' layer.
+              map.on('mousemove', layerID, function (e) {
+                  map.getCanvas().style.cursor = 'pointer';
+                  //map.setPaintProperty('observatory', 'circle-stroke-width', 2);
+                  //map.setPaintProperty('observatory', 'circle-opacity', 0.4);
+              });
+              // Change it back to a pointer when it leaves.
+              map.on('mouseleave', layerID, function () {
+                  map.getCanvas().style.cursor = '';
+                  //map.setLayoutProperty('observatory', 'icon-image', 'circle-11');
+              });
+
+
+            });
+
+          });
+
+
+          map.on('zoom', function() {
+              if (map.getZoom() > 5.9) {
+                obser_insts.forEach(function(item, index) {
+                  var layerID = 'obser-'+ item;
+                  map.setLayoutProperty(layerID, 'text-field',
+                    ['format', ['get', 'stn_en'], { 'font-scale': 0.7 }]);
+                });
+              }
+              else {
+                obser_insts.forEach(function(item, index) {
+                  var layerID = 'obser-'+ item;
+                  map.setLayoutProperty(layerID, 'text-field', "");
+                });
+              }
+          });
+
+
+        </script>
+    </body>
+</html>
